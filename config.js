@@ -3,3 +3,4 @@ window.PRO4A_CONFIG = {
   APP_NAME: "PRO 4A KIPO/WIPO Claims Monitoring System",
   VERSION: "Phase 1.0"
 };
+
