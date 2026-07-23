@@ -1,112 +1,175 @@
-const CFG=window.PRO4A_CONFIG;let session=null,records=[],users=[],history=[],currentPage=1,pageSize=12,charts={},recordModal,viewModal,userModal;
-const UNITS=["Cavite PPO","Laguna PPO","Rizal PPO","Batangas PPO","Quezon PPO","RHQ"];
-const WORKFLOW=["Incident Recorded","Requirements Submitted","For Validation","RHE Processing","NAPOLCOM Processing","PSMBFI Processing","Financial Assistance Released","Completed"];
-const CHECKLIST=["Incident Report","Spot Report","Medical Certificate","Death Certificate","Investigation Report","Endorsement","RHE Requirements","NAPOLCOM Requirements","PSMBFI Requirements","Other Supporting Documents"];
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const CFG = window.PRO4A_CONFIG;
+
+let session = null;
+let records = [];
+let users = [];
+let history = [];
+let currentPage = 1;
+let pageSize = 12;
+let charts = {};
+let recordModal;
+let viewModal;
+let userModal;
+
+const UNITS = [
+  "Cavite PPO",
+  "Laguna PPO",
+  "Rizal PPO",
+  "Batangas PPO",
+  "Quezon PPO",
+  "RHQ"
+];
+
+const WORKFLOW = [
+  "Incident Recorded",
+  "Requirements Submitted",
+  "For Validation",
+  "RHE Processing",
+  "NAPOLCOM Processing",
+  "PSMBFI Processing",
+  "Financial Assistance Released",
+  "Completed"
+];
+
+const CHECKLIST = [
+  "Incident Report",
+  "Spot Report",
+  "Medical Certificate",
+  "Death Certificate",
+  "Investigation Report",
+  "Endorsement",
+  "RHE Requirements",
+  "NAPOLCOM Requirements",
+  "PSMBFI Requirements",
+  "Other Supporting Documents"
+];
+
+const $ = selector => document.querySelector(selector);
+const $$ = selector => [...document.querySelectorAll(selector)];
+
 let activeRequests = 0;
 
-function setLoading(visible) {
-    const loading = document.getElementById("loading");
-    if (!loading) return;
+function setLoadingVisible(visible) {
+  const loadingElement = document.getElementById("loading");
 
-    if (visible) {
-        loading.classList.remove("d-none");
-        loading.style.display = "flex";
-    } else {
-        loading.classList.add("d-none");
-        loading.style.display = "none";
-    }
+  if (!loadingElement) {
+    return;
+  }
+
+  if (visible) {
+    loadingElement.classList.remove("d-none");
+    loadingElement.style.setProperty("display", "flex", "important");
+  } else {
+    loadingElement.classList.add("d-none");
+    loadingElement.style.setProperty("display", "none", "important");
+  }
 }
 
 function busy(isLoading) {
-    if (isLoading) {
-        activeRequests++;
-    } else {
-        activeRequests = Math.max(0, activeRequests - 1);
-    }
+  if (isLoading) {
+    activeRequests++;
+  } else {
+    activeRequests = Math.max(0, activeRequests - 1);
+  }
 
-    setLoading(activeRequests > 0);
+  setLoadingVisible(activeRequests > 0);
 }
 
 function resetLoading() {
-    activeRequests = 0;
-    setLoading(false);
+  activeRequests = 0;
+  setLoadingVisible(false);
 }
 
 function toast(message) {
-    const box = document.getElementById("toastBox");
-    const div = document.createElement("div");
-    div.className = "app-toast";
-    div.textContent = message;
-    box.appendChild(div);
+  const toastBox = document.getElementById("toastBox");
 
-    setTimeout(() => div.remove(), 3500);
+  if (!toastBox) {
+    alert(message);
+    return;
+  }
+
+  const item = document.createElement("div");
+  item.className = "app-toast";
+  item.textContent = message;
+
+  toastBox.appendChild(item);
+
+  setTimeout(() => {
+    item.remove();
+  }, 3500);
 }
 
 async function api(action, payload = {}) {
+  if (!CFG || !CFG.API_URL || CFG.API_URL.includes("PASTE_")) {
+    throw new Error(
+      "The Apps Script API URL is missing from config.js."
+    );
+  }
 
-    if (!CFG.API_URL || CFG.API_URL.includes("PASTE_")) {
-        throw new Error("Please configure API_URL in config.js");
+  const requestData = new URLSearchParams();
+
+  requestData.append(
+    "data",
+    JSON.stringify({
+      action: action,
+      token: session?.token || "",
+      ...payload
+    })
+  );
+
+  const controller = new AbortController();
+
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, 30000);
+
+  busy(true);
+
+  try {
+    const response = await fetch(CFG.API_URL, {
+      method: "POST",
+      body: requestData,
+      redirect: "follow",
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        "Server returned HTTP status " + response.status
+      );
     }
 
-    const data = new URLSearchParams();
+    const responseText = await response.text();
 
-    data.append(
-        "data",
-        JSON.stringify({
-            action,
-            token: session?.token || "",
-            ...payload
-        })
-    );
-
-    busy(true);
-
-    const controller = new AbortController();
-
-    const timeout = setTimeout(() => {
-        controller.abort();
-    }, 30000);
+    let result;
 
     try {
+      result = JSON.parse(responseText);
+    } catch {
+      console.error("Invalid API response:", responseText);
 
-        const response = await fetch(CFG.API_URL, {
-            method: "POST",
-            body: data,
-            redirect: "follow",
-            signal: controller.signal
-        });
-
-        if (!response.ok) {
-            throw new Error("HTTP " + response.status);
-        }
-
-        const result = await response.json();
-
-        if (!result.ok) {
-            throw new Error(result.error || "Request failed.");
-        }
-
-        return result;
-
-    } catch (err) {
-
-        if (err.name === "AbortError") {
-            throw new Error("Server timeout.");
-        }
-
-        throw err;
-
-    } finally {
-
-        clearTimeout(timeout);
-
-        busy(false);
-
+      throw new Error(
+        "The server returned an invalid response."
+      );
     }
-}
 
-window.addEventListener("load", resetLoading);
-window.addEventListener("pageshow", resetLoading);
-window.addEventListener("error", resetLoading);
-window.addEventListener("unhandledrejection", resetLoading);
+    if (!result.ok) {
+      throw new Error(
+        result.error || "Request failed."
+      );
+    }
+
+    return result;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(
+        "The request timed out. Please try again."
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    busy(false);
+  }
+}
