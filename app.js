@@ -114,95 +114,72 @@ function toast(message) {
 }
 
 async function api(action, payload = {}) {
-  if (
-    !CFG ||
-    !CFG.API_URL ||
-    CFG.API_URL.includes("PASTE_")
-  ) {
-    throw new Error(
-      "The Apps Script API URL is missing from config.js."
-    );
+  if (!CFG || !CFG.API_URL) {
+    throw new Error("API URL is missing from config.js.");
   }
 
-  const requestData =
-    new URLSearchParams();
+  const request = {
+    action,
+    token: session?.token || "",
+    ...payload
+  };
 
-  requestData.append(
-    "data",
-    JSON.stringify({
-      action: action,
-      token: session?.token || "",
-      ...payload
-    })
-  );
-
-  const controller =
-    new AbortController();
-
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-  }, 30000);
+  const formData = new FormData();
+  formData.append("data", JSON.stringify(request));
 
   busy(true);
 
-  try {
-    const response = await fetch(
-      CFG.API_URL,
-      {
-        method: "POST",
-        body: requestData,
-        redirect: "follow",
-        signal: controller.signal
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        "Server returned HTTP status " +
-        response.status
+  const timeout = new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(
+        new Error(
+          "The server did not respond within 20 seconds. Check the Apps Script deployment."
+        )
       );
-    }
+    }, 20000);
+  });
 
-    const responseText =
-      await response.text();
+  try {
+    const fetchRequest = fetch(CFG.API_URL, {
+      method: "POST",
+      body: formData,
+      redirect: "follow"
+    });
+
+    const response = await Promise.race([
+      fetchRequest,
+      timeout
+    ]);
+
+    const responseText = await response.text();
+
+    console.log("API response:", responseText);
 
     let result;
 
     try {
-      result =
-        JSON.parse(responseText);
-    } catch (parseError) {
-      console.error(
-        "Invalid API response:",
-        responseText
-      );
-
+      result = JSON.parse(responseText);
+    } catch (error) {
       throw new Error(
-        "The server returned an invalid response."
+        "Invalid response from Apps Script: " +
+        responseText.substring(0, 150)
       );
     }
 
-    if (!result.ok) {
+    if (result.ok === false || result.success === false) {
       throw new Error(
         result.error ||
+        result.message ||
         "Request failed."
       );
     }
 
     return result;
   } catch (error) {
-    if (
-      error.name === "AbortError"
-    ) {
-      throw new Error(
-        "The request timed out. Please try again."
-      );
-    }
-
+    console.error("API error:", error);
     throw error;
   } finally {
-    clearTimeout(timeoutId);
-    busy(false);
+    resetLoading();
   }
 }
 
