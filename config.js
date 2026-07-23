@@ -1,0 +1,5 @@
+window.PRO4A_CONFIG = {
+  API_URL: "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE",
+  APP_NAME: "PRO 4A KIPO/WIPO Claims Monitoring System",
+  VERSION: "Phase 1.0"
+};

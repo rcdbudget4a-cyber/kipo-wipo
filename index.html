@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PRO 4A KIPO/WIPO Monitoring</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="toastBox" class="toast-box"></div>
+
+<section id="authView" class="auth-view">
+  <div class="auth-hero">
+    <div class="seal">PRO<br>4A</div>
+    <div>
+      <div class="agency">PHILIPPINE NATIONAL POLICE</div>
+      <h1>KIPO/WIPO Claims Monitoring System</h1>
+      <p>Police Regional Office CALABARZON • Calendar Years 2025–2026</p>
+    </div>
+  </div>
+  <div class="auth-panel">
+    <div class="auth-card">
+      <div class="nav nav-pills nav-fill mb-4">
+        <button class="nav-link active auth-tab" data-tab="login">Login</button>
+        <button class="nav-link auth-tab" data-tab="signup">New User</button>
+      </div>
+      <form id="loginForm">
+        <h3 class="mb-3">Account Login</h3>
+        <label class="form-label">Username</label>
+        <input id="loginUsername" class="form-control mb-3" required>
+        <label class="form-label">Password</label>
+        <input id="loginPassword" type="password" class="form-control mb-3" required>
+        <button class="btn btn-success w-100" type="submit">Sign In</button>
+        <div class="small text-secondary mt-3">Default Admin: <b>admin</b> / <b>Admin@PRO4A2026</b></div>
+      </form>
+      <form id="signupForm" class="d-none">
+        <h3 class="mb-3">New User Registration</h3>
+        <label class="form-label">Rank / Full Name</label>
+        <input id="signupName" class="form-control mb-3" required>
+        <label class="form-label">Unit / Office</label>
+        <select id="signupUnit" class="form-select mb-3" required>
+          <option value="">Select Unit</option>
+          <option>Cavite PPO</option><option>Laguna PPO</option><option>Rizal PPO</option>
+          <option>Batangas PPO</option><option>Quezon PPO</option><option>RHQ</option>
+        </select>
+        <label class="form-label">Username</label>
+        <input id="signupUsername" class="form-control mb-3" required>
+        <label class="form-label">Password</label>
+        <input id="signupPassword" type="password" minlength="8" class="form-control mb-3" required>
+        <button class="btn btn-success w-100" type="submit">Submit Registration</button>
+        <div class="alert alert-warning small mt-3 mb-0">Account remains Pending until approved by the Administrator.</div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<div id="appView" class="d-none">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-seal">4A</span><div><b>PRO 4A</b><small>KIPO/WIPO Monitoring</small></div></div>
+    <nav>
+      <button class="side-link active" data-page="dashboard">Dashboard</button>
+      <button class="side-link" data-page="records">KIPO/WIPO Records</button>
+      <button class="side-link admin-only" data-page="users">User Approval <span id="pendingBadge" class="badge bg-danger">0</span></button>
+      <button class="side-link" data-page="history">Activity History</button>
+      <button class="side-link" data-page="profile">My Profile</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="loggedUser" class="small"></div>
+      <button id="logoutBtn" class="btn btn-outline-light btn-sm w-100 mt-2">Logout</button>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <button id="menuBtn" class="btn btn-light d-lg-none">☰</button>
+      <div><h4 id="pageTitle" class="mb-0">Dashboard</h4><small id="pageSub"></small></div>
+      <span id="roleBadge" class="badge text-bg-success ms-auto"></span>
+    </header>
+
+    <section id="dashboardPage" class="page active">
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-xl"><div class="metric"><span>Total</span><strong id="mTotal">0</strong></div></div>
+        <div class="col-6 col-xl"><div class="metric"><span>KIPO</span><strong id="mKipo">0</strong></div></div>
+        <div class="col-6 col-xl"><div class="metric"><span>WIPO</span><strong id="mWipo">0</strong></div></div>
+        <div class="col-6 col-xl"><div class="metric"><span>Pending</span><strong id="mPending">0</strong></div></div>
+        <div class="col-6 col-xl"><div class="metric"><span>Completed</span><strong id="mCompleted">0</strong></div></div>
+      </div>
+      <div class="row g-3">
+        <div class="col-lg-7"><div class="card-panel"><h5>Claims by Unit</h5><canvas id="unitChart" height="120"></canvas></div></div>
+        <div class="col-lg-5"><div class="card-panel"><h5>KIPO vs WIPO</h5><canvas id="typeChart" height="180"></canvas></div></div>
+        <div class="col-12"><div class="card-panel"><h5>Recent Activity</h5><div id="recentActivity"></div></div></div>
+      </div>
+    </section>
+
+    <section id="recordsPage" class="page">
+      <div class="card-panel mb-3">
+        <div class="d-flex flex-wrap gap-2">
+          <input id="searchBox" class="form-control flex-grow-1" style="min-width:230px" placeholder="Search name, unit, status...">
+          <select id="typeFilter" class="form-select w-auto"><option value="">All Types</option><option>KIPO</option><option>WIPO</option></select>
+          <select id="yearFilter" class="form-select w-auto"><option value="">All Years</option><option>2025</option><option>2026</option></select>
+          <select id="statusFilter" class="form-select w-auto"><option value="">All Status</option><option>Pending</option><option>In Process</option><option>For Review</option><option>Completed</option></select>
+          <button id="addBtn" class="btn btn-success">+ Add Personnel</button>
+          <button id="refreshBtn" class="btn btn-outline-secondary">Refresh</button>
+        </div>
+      </div>
+      <div class="card-panel">
+        <div class="table-responsive">
+          <table class="table align-middle"><thead><tr><th>Claim ID</th><th>Type</th><th>CY</th><th>Rank/Name</th><th>Unit</th><th>Status</th><th>Actions</th></tr></thead><tbody id="recordsBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="usersPage" class="page admin-only">
+      <div class="card-panel">
+        <h5>User Approval and Management</h5>
+        <p class="text-secondary small">Pending users cannot log in until approved.</p>
+        <div class="table-responsive">
+          <table class="table align-middle"><thead><tr><th>Rank/Name</th><th>Unit</th><th>Username</th><th>Status</th><th>Actions</th></tr></thead><tbody id="usersBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="historyPage" class="page">
+      <div class="card-panel"><h5>Activity History</h5><div class="table-responsive"><table class="table"><thead><tr><th>Date/Time</th><th>User</th><th>Unit</th><th>Action</th><th>Details</th></tr></thead><tbody id="historyBody"></tbody></table></div></div>
+    </section>
+
+    <section id="profilePage" class="page">
+      <div class="card-panel profile-card">
+        <h5>Edit My Profile</h5>
+        <form id="profileForm" class="row g-3">
+          <div class="col-md-6"><label class="form-label">Rank / Name</label><input id="profileName" class="form-control" required></div>
+          <div class="col-md-6"><label class="form-label">Unit</label><input id="profileUnit" class="form-control" disabled></div>
+          <div class="col-md-6"><label class="form-label">Current Password</label><input id="currentPassword" type="password" class="form-control"></div>
+          <div class="col-md-6"><label class="form-label">New Password</label><input id="newPassword" type="password" minlength="8" class="form-control"></div>
+          <div class="col-12"><button class="btn btn-success">Save Profile</button></div>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal fade" id="recordModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+    <form id="recordForm">
+      <div class="modal-header"><h5 id="recordModalTitle" class="modal-title">Add Personnel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input id="recordId" type="hidden">
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label">Type</label><select id="recordType" class="form-select" required><option>KIPO</option><option>WIPO</option></select></div>
+          <div class="col-md-4"><label class="form-label">Calendar Year</label><select id="recordYear" class="form-select" required><option>2025</option><option>2026</option></select></div>
+          <div class="col-md-4"><label class="form-label">Status</label><select id="recordStatus" class="form-select"><option>Pending</option><option>In Process</option><option>For Review</option><option>Completed</option></select></div>
+          <div class="col-md-8"><label class="form-label">Rank / Full Name</label><input id="recordName" class="form-control" required></div>
+          <div class="col-md-4"><label class="form-label">Unit / Office</label><select id="recordUnit" class="form-select" required><option>Cavite PPO</option><option>Laguna PPO</option><option>Rizal PPO</option><option>Batangas PPO</option><option>Quezon PPO</option><option>RHQ</option></select></div>
+          <div class="col-md-4"><label class="form-label">Date of Incident</label><input id="recordDate" type="date" class="form-control"></div>
+          <div class="col-12"><label class="form-label">Nature of Injury / Case Details</label><textarea id="recordInjury" class="form-control" rows="3"></textarea></div>
+          <div class="col-12"><label class="form-label">Benefits / Assistance Status</label><textarea id="recordBenefits" class="form-control" rows="3"></textarea></div>
+          <div class="col-12"><label class="form-label">Remarks</label><textarea id="recordRemarks" class="form-control" rows="3"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success">Save</button></div>
+    </form>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
