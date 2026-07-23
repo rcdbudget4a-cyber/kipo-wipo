@@ -5,7 +5,21 @@ const CHECKLIST=["Incident Report","Spot Report","Medical Certificate","Death Ce
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 let activeRequests = 0;  function busy(isLoading) {   const loadingElement = document.querySelector("#loading");   if (!loadingElement) return;    if (isLoading) {     activeRequests++;   } else {     activeRequests = Math.max(0, activeRequests - 1);   }    loadingElement.classList.toggle("d-none", activeRequests === 0); }
 function toast(m){const d=document.createElement("div");d.className="app-toast";d.textContent=m;$("#toastBox").appendChild(d);setTimeout(()=>d.remove(),3500)}
-async function api(action,payload={}){if(!CFG.API_URL||CFG.API_URL.includes("PASTE_"))throw new Error("Paste your existing Apps Script /exec URL in config.js.");const data=new URLSearchParams();data.append("data",JSON.stringify({action,token:session?.token||"",...payload}));busy(true);try{const r=await fetch(CFG.API_URL,{method:"POST",body:data,redirect:"follow"});const out=await r.json();if(!out.ok)throw new Error(out.error||"Request failed.");return out}finally{busy(false)}}
+async function api(action,payload={}){if(!CFG.API_URL||CFG.API_URL.includes("PASTE_"))throw new Error("Paste your existing Apps Script /exec URL in config.js.");const data=new URLSearchParams();data.append("data",JSON.stringify({action,token:session?.token||"",...payload}));busy(true);try{const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 30000);
+
+let r;
+
+try {
+  r = await fetch(CFG.API_URL, {
+    method: "POST",
+    body: data,
+    redirect: "follow",
+    signal: controller.signal
+  });
+} finally {
+  clearTimeout(timeout);
+}const out=await r.json();if(!out.ok)throw new Error(out.error||"Request failed.");return out}finally{busy(false)}}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function fmtDate(v){if(!v)return"—";const d=new Date(v);return isNaN(d)?String(v):d.toLocaleDateString("en-PH",{year:"numeric",month:"short",day:"2-digit"})}
 function statusChip(s){return `<span class="status-chip status-${String(s).toLowerCase().replaceAll(" ","-")}">${esc(s)}</span>`}
@@ -48,3 +62,11 @@ function downloadCsv(name,rows){if(!rows.length)return toast("No records to expo
 $("#exportCsvBtn").onclick=()=>downloadCsv("PRO4A_KIPO_WIPO_Registry.csv",filtered().map(r=>({ClaimID:r.claimId,Type:r.type,Year:r.year,RankName:r.rankName,Unit:r.unit,Office:r.office,Workflow:r.workflowStage,Status:r.status,Benefits:r.benefits,Remarks:r.remarks})));
 $$(".report-btn").forEach(b=>b.onclick=()=>{const kind=b.dataset.report;if(kind==="unit"){const m={};records.forEach(r=>m[r.unit]=(m[r.unit]||0)+1);downloadCsv("Claims_By_Unit.csv",Object.entries(m).map(([Unit,Claims])=>({Unit,Claims})))}else if(kind==="year"){const m={};records.forEach(r=>m[r.year]=(m[r.year]||0)+1);downloadCsv("Claims_By_Year.csv",Object.entries(m).map(([Year,Claims])=>({Year,Claims})))}else{const m={};records.forEach(r=>m[r.workflowStage||"Incident Recorded"]=(m[r.workflowStage||"Incident Recorded"]||0)+1);downloadCsv("Claims_By_Workflow.csv",Object.entries(m).map(([Workflow,Claims])=>({Workflow,Claims})))}});$("#printBtn").onclick=()=>{showPage("records");setTimeout(()=>window.print(),300)};
 (async()=>{if(localStorage.getItem("pro4a_theme")==="dark")document.body.classList.add("dark");updateThemeIcon();const s=localStorage.getItem("pro4a_session");if(s){session=JSON.parse(s);await openApp()}})();
+window.addEventListener("load", function () {
+  activeRequests = 0;
+
+  const loadingElement = document.querySelector("#loading");
+  if (loadingElement) {
+    loadingElement.classList.add("d-none");
+  }
+});
