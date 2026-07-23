@@ -3,7 +3,7 @@ const UNITS=["Cavite PPO","Laguna PPO","Rizal PPO","Batangas PPO","Quezon PPO","
 const WORKFLOW=["Incident Recorded","Requirements Submitted","For Validation","RHE Processing","NAPOLCOM Processing","PSMBFI Processing","Financial Assistance Released","Completed"];
 const CHECKLIST=["Incident Report","Spot Report","Medical Certificate","Death Certificate","Investigation Report","Endorsement","RHE Requirements","NAPOLCOM Requirements","PSMBFI Requirements","Other Supporting Documents"];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-function busy(v){$("#loading").classList.toggle("d-none",!v)}
+let activeRequests = 0;  function busy(isLoading) {   const loadingElement = document.querySelector("#loading");   if (!loadingElement) return;    if (isLoading) {     activeRequests++;   } else {     activeRequests = Math.max(0, activeRequests - 1);   }    loadingElement.classList.toggle("d-none", activeRequests === 0); }
 function toast(m){const d=document.createElement("div");d.className="app-toast";d.textContent=m;$("#toastBox").appendChild(d);setTimeout(()=>d.remove(),3500)}
 async function api(action,payload={}){if(!CFG.API_URL||CFG.API_URL.includes("PASTE_"))throw new Error("Paste your existing Apps Script /exec URL in config.js.");const data=new URLSearchParams();data.append("data",JSON.stringify({action,token:session?.token||"",...payload}));busy(true);try{const r=await fetch(CFG.API_URL,{method:"POST",body:data,redirect:"follow"});const out=await r.json();if(!out.ok)throw new Error(out.error||"Request failed.");return out}finally{busy(false)}}
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
