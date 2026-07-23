@@ -1,5 +1,5 @@
 window.PRO4A_CONFIG = {
-  API_URL: "PASTE_YOUR_EXISTING_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE",
+  API_URL: "https://script.google.com/macros/s/AKfycbyniPYiegrU40ib_aohKyDmyTiWkgur6nNkD5soX22xAo6KiVUQMhVUA6VMveo6Ec7PXQ/exec",
   APP_NAME: "PRO 4A KIPO/WIPO Claims Monitoring System",
   VERSION: "Phase 2.0"
 };
